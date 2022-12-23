@@ -40,12 +40,6 @@ class APIResponseNotList(Exception):
     pass
 
 
-class VariableNotExists(Exception):
-    """Необходимая переменная окружения отсутствует."""
-
-    pass
-
-
 class UnknownStatus(Exception):
     """Статус домашки не определён."""
 

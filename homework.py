@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import time
 from http import HTTPStatus
 
@@ -8,7 +9,7 @@ import telegram
 from dotenv import load_dotenv
 
 from exceptions import (EndPointIsNotReached, HTTPStatusCodeNotCorrect,
-                        TelegramMessageError, UnknownStatus, VariableNotExists)
+                        TelegramMessageError, UnknownStatus)
 
 load_dotenv()
 
@@ -47,25 +48,28 @@ def send_message(bot, message):
             f'Отправка сообщения в чат {TELEGRAM_CHAT_ID}: {message}.'
         )
         bot.send_message(TELEGRAM_CHAT_ID, message)
-        logger.debug(f'Сообщение {message} отправлено')
+
     except telegram.error.TelegramError as error:
-        logger.error(f'Ошибка при отправке сообщения {error}.')
-        raise TelegramMessageError(
-            f'Ошибка при отправке сообщения {error}'
-        )
+        mes_error = f'Ошибка при отправке сообщения {error}'
+        logger.error(mes_error)
+        raise TelegramMessageError(mes_error)
+    else:
+        logger.debug(f'Сообщение {message} отправлено')
 
 
 def get_api_answer(timestamp):
     """Делает запрос к единственному эндпоинту API-сервиса."""
     timehomework = timestamp or int(time.time)
     payload = {'from_date': timehomework}
+    params_dict = {
+        'url': ENDPOINT,
+        'headers': HEADERS,
+        'params': payload
+    }
     try:
-        logger.info('Начало запроса')
-        homework = requests.get(
-            url=ENDPOINT,
-            headers=HEADERS,
-            params=payload
-        )
+        logger.info('Начало запроса к эндпоинту API')
+        homework = requests.get(**params_dict)
+        logger.info('Отправлен запрос к эндпоинту API')
         if homework.status_code != HTTPStatus.OK:
             logger.error(
                 f'Код ответа не соответствует 200: {homework.status_code}'
@@ -75,10 +79,9 @@ def get_api_answer(timestamp):
             )
         return homework.json()
     except requests.exceptions.RequestException as error:
-        logger.error(f'Ошибка при запросе к эндпоинту {error}')
-        raise EndPointIsNotReached(
-            f'Ошибка при запросе к эндпоинту {error}'
-        )
+        endpoint_error = f'Ошибка при запросе к эндпоинту {error}'
+        logger.error(endpoint_error)
+        raise EndPointIsNotReached(endpoint_error)
 
 
 def check_response(response):
@@ -122,7 +125,7 @@ def main():
     if not check_tokens():
         no_variable = 'Отсутствует необходимая переменная окружения'
         logger.critical(no_variable)
-        raise VariableNotExists(no_variable)
+        sys.exit(no_variable)
     else:
         bot = telegram.Bot(token=TELEGRAM_TOKEN)
         timestamp = int(time.time())
@@ -143,7 +146,6 @@ def main():
             time.sleep(RETRY_PERIOD)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            logger.error(message)
             send_message(bot, message)
         finally:
             time.sleep(RETRY_PERIOD)
