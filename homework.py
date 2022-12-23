@@ -71,12 +71,11 @@ def get_api_answer(timestamp):
         homework = requests.get(**params_dict)
         logger.info('Отправлен запрос к эндпоинту API')
         if homework.status_code != HTTPStatus.OK:
-            logger.error(
-                f'Код ответа не соответствует 200: {homework.status_code}'
-            )
-            raise HTTPStatusCodeNotCorrect(
+            status_code_error = (
                 f'Не удалось получить API, код ошибки: {homework.status_code}'
             )
+            logger.error(status_code_error)
+            raise HTTPStatusCodeNotCorrect(status_code_error)
         return homework.json()
     except requests.exceptions.RequestException as error:
         endpoint_error = f'Ошибка при запросе к эндпоинту {error}'
@@ -146,7 +145,7 @@ def main():
             time.sleep(RETRY_PERIOD)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            send_message(bot, message)
+            send_message(bot, message)  # Надеюсь, что поняла замечание:)
         finally:
             time.sleep(RETRY_PERIOD)
 
